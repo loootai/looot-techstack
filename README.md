@@ -1,4 +1,8 @@
+<p align="center"><img src="assets/hero.png" alt="looot-techstack" width="100%"></p>
+
 # looot-techstack
+
+[![License](https://img.shields.io/github/license/loootai/looot-techstack)](LICENSE) [![Release](https://img.shields.io/github/v/release/loootai/looot-techstack)](https://github.com/loootai/looot-techstack/releases) [![Docs](https://img.shields.io/badge/docs-docs.looot.ai-12A06A)](https://docs.looot.ai)
 
 An open-source alternative to [BuiltWith](https://builtwith.com/plans) and [Wappalyzer](https://www.wappalyzer.com/pricing/) lookups: what technology a company's website uses, and which companies use a technology. BuiltWith starts at $295 a month and Wappalyzer's paid plans at $250 a month, with a free tier of 50 lookups a month (public pricing pages, read 2026-10-10). This repo runs on one looot key and you pay list price per domain, from $0 up to a few cents.
 
@@ -95,3 +99,20 @@ Stack: TypeScript, Next.js App Router, Tailwind. Built on [looot](https://looot.
 ## Licence
 
 MIT, copyright looot.
+
+## Related
+
+Other open-source projects built on [looot](https://looot.ai):
+
+- [looot-intent](https://github.com/loootai/looot-intent): account intent and buying-stage scoring (6sense)
+- [looot-score](https://github.com/loootai/looot-score): lead and ICP fit scoring (MadKudu)
+- [looot-reveal](https://github.com/loootai/looot-reveal): which companies visit your site (RB2B, Clearbit Reveal)
+- [looot-signals](https://github.com/loootai/looot-signals): hiring, funding and news triggers (TheirStack, Harmonic)
+- [looot-lookalike](https://github.com/loootai/looot-lookalike): lookalike company search (Ocean.io)
+- [looot-ads](https://github.com/loootai/looot-ads): competitor ad board (Foreplay)
+- [looot-reviews](https://github.com/loootai/looot-reviews): review themes and weak spots (ReviewTrackers)
+- [looot-battlecards](https://github.com/loootai/looot-battlecards): competitor battlecards (Klue, Crayon)
+- [looot-mentions](https://github.com/loootai/looot-mentions): brand and keyword listening (Brand24)
+- [looot-crm](https://github.com/loootai/looot-crm): a small CRM with buying signals built in
+- [looot-seo](https://github.com/loootai/looot-seo): self-hosted SEO workspace
+- [looot-monitor](https://github.com/loootai/looot-monitor): brand and competitor monitoring with alerts
