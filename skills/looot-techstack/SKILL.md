@@ -5,7 +5,7 @@ description: Find out which technologies a list of websites use, compare several
 
 # looot-techstack
 
-Run from the repository root. Needs Node 22 and `npm ci`.
+Run from the repository root. Needs Node 22.12 or newer and `npm install --ignore-scripts`. A real run needs `LOOOT_TOKEN` (looot Settings, Agent tokens) and a funded balance; a dry run needs neither. See the README headings What you need and Troubleshooting.
 
 1. Dry run first and show the user the exact quote:
    `npm run techstack -- --domains <file> --dry-run`

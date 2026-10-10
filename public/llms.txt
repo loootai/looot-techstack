@@ -9,6 +9,9 @@ Open-source technology lookup for websites. Input: domains. Output: technologies
 - Reverse search: npm run techstack -- --find HubSpot --dry-run
 - Demo UI with sample data: npm run demo (http://localhost:3530)
 
+## Setup
+Node 22.12 or newer. npm install --ignore-scripts. The CLI reads LOOOT_TOKEN from the shell (create one in looot Settings, Agent tokens). The web app reads .env.local. See README headings: What you need, Try it in one minute, Run it with your own data, Spending, Troubleshooting.
+
 ## Outputs
 out/techstack.json, techstack.csv (one row per domain and technology), techstack.md. Answers are cached in state/techstack.json for 30 days, so repeats are free.
 

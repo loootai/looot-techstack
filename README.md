@@ -15,27 +15,82 @@ It asks several technology providers about each domain and shows their answers s
 
 BuiltWith and Wappalyzer run their own crawlers. This repo does not detect anything itself. It queries the providers behind looot's `company.technographics` job and compares them. That is slower to trust and cheaper to run, and the side-by-side view shows you where providers disagree instead of hiding it. Wappalyzer's browser extension and its own fingerprint database are not replicated.
 
-## Three ways to run
+## What you need
 
-Demo, no account and no token:
+- Node 22.12 or newer. The repo has no `engines` field or `.nvmrc`. Next.js 16 needs 20.9 or newer and the test runner (Vitest 5) needs 22.12 or newer. I ran it on Node 24.
+- npm.
+- A looot account and token, only for real lookups. Sign up at https://looot.ai/auth/sign-up. To get a token, run `looot login` (`npm i -g looot`), which opens a browser approval. Or in the looot web app go to Settings, "Agent tokens", and create one (https://docs.looot.ai/get-started/sign-in). With no browser or in CI, create the token in Settings, Agent tokens, then `export LOOOT_TOKEN=...`. The token needs the scopes runs.execute, catalog.read, runs.read and usage.read.
+- A funded balance. Minimum top-up is $5. Signing up adds no credit (https://docs.looot.ai/money).
+
+No other account is needed. The app does not use Supabase, an LLM key or any other service.
+
+## Try it in one minute
+
+No account and no token.
 
 ```bash
-npm ci
-npm run demo        # http://localhost:3530, made-up companies with fixture answers
+git clone https://github.com/loootai/looot-techstack && cd looot-techstack
+npm install --ignore-scripts
+npm run demo
 ```
 
-Headless CLI:
+Open http://localhost:3530. It shows made-up companies with fixture answers. Stop it with Ctrl-C. To check the CLI without a token, see the dry run below.
+
+## Run it with your own data
+
+The web app (`npm run dev`, or `npm run build && npm start`) reads `.env.local`. The CLI does not read any env file, so export the variables in your shell.
 
 ```bash
-npm run techstack -- --domains examples/domains.csv --dry-run     # exact list-price cost, no call
-LOOOT_TOKEN=... npm run techstack -- --domains domains.csv --cap 0.50
+cp .env.example .env.local     # web app only
+export LOOOT_TOKEN=...         # CLI
+```
+
+| Variable | Required | What it does | Where to get it |
+|---|---|---|---|
+| `LOOOT_TOKEN` | Required for real lookups, not for `--dry-run` or the demo | Bearer token for the looot API | Settings, Agent tokens in the looot app, or `looot login` |
+| `LOOOT_API_URL` | Optional | looot API base URL. Default `https://api.looot.ai` | Leave unset |
+| `TECHSTACK_DATA` | Optional | State file the web app uses for stored answers. Default `data/techstack.json` | A path you choose |
+| `TECHSTACK_CONFIG` | Optional | Config file the web app reads. Default `techstack.config.json` | A path you choose |
+| `NEXT_PUBLIC_DEMO` | Optional | `1` turns on demo mode with fixture answers. `npm run demo` sets it | Do not set it for real use |
+
+`techstack.config.json` sets the default `providers`, `spendCapUsd` (default 1) and `cacheDays` (default 30).
+
+Input is one domain per line, comma separated, or a CSV with a `domain` column. URLs are reduced to the host. `examples/domains.csv` is a three-line example. Dry run first. It needs no token and calls nothing:
+
+```bash
+npm run techstack -- --domains examples/domains.csv --dry-run
+```
+
+Real output from that command:
+
+```
+3 domains x 3 providers: 0 answers already stored (free), the rest run.
+  BuiltWith Free: 3 x $0.0000 = $0.00  [company.technographics, builtwith-free1-api-json]
+  Tomba: 3 x $0.0089 = $0.03  [company.technographics, tomba-technology]
+  PredictLeads: 3 x $0.0100 = $0.03  [company.technographics, predictleads-companies-technology-detections]
+Total: $0.06. Spend cap: $1.00.
+List prices dated 2026-10-10. The real charge is read from each run.
+Dry run: no looot call was made and nothing was written.
+```
+
+Then the real run:
+
+```bash
+LOOOT_TOKEN=... npm run techstack -- --domains examples/domains.csv --cap 0.50
 LOOOT_TOKEN=... npm run techstack -- --domain stripe.com --providers builtwith-free,tomba,predictleads,builtwith
-npm run techstack -- --find HubSpot --dry-run                     # companies using a technology
+npm run techstack -- --find HubSpot --dry-run     # companies using a technology
 ```
 
-Input is one domain per line, comma separated, or a CSV with a `domain` column. URLs are reduced to the host. Output goes to `out/techstack.json`, `techstack.csv` (one row per domain and technology) and `techstack.md`. Answers are stored in `state/techstack.json` for 30 days, so asking again is free.
+Results go to `out/techstack.json`, `out/techstack.csv` (one row per domain and technology) and `out/techstack.md`. Answers are stored in `state/techstack.json` for 30 days, so asking again is free. Change the folders with `--out` and `--state`. Run `npm run techstack -- --help` for every flag. The web app has a domain lookup, a bulk table with a technology filter and CSV export, and a "find companies" page. Its stored answers live in `data/techstack.json`, a different file from the CLI's.
 
-Web UI on the same engine (`cp .env.example .env.local`, set `LOOOT_TOKEN`, `npm run build && npm start`): a domain lookup, a bulk table with a technology filter and CSV export, and a "find companies" page. Supabase and sign-in are not part of v0.1. State is one JSON file, so put it behind your own access control.
+## Spending
+
+- The quote shows before any paid action, line by line. It is exact. Each domain and provider pair is one call.
+- The cap is `--cap <usd>` on the CLI and `spendCapUsd` in `techstack.config.json`. The default is $1. A run stops before a call that would pass it and prints how many calls were not run.
+- Typical run at list price. 100 domains on the default three providers cost 100 x $0.0189 = $1.89. Adding BuiltWith makes it $6.84. The same 100 domains cost $0 to look up again for 30 days.
+- Each call sends a stable idempotency key per (domain, provider), for example `techstack:tomba:stripe.com`. A retry never pays twice.
+- A run still in progress when waiting stops is stored as pending. The next run collects it. It is never treated as failed at $0.
+- Failed calls are not charged by looot. The tool reads the real charge from each run.
 
 ## Providers and prices
 
@@ -58,16 +113,41 @@ Find companies using a technology:
 
 Typical run at list price: 100 domains on the default three providers cost 100 x $0.0189 = $1.89. Adding BuiltWith makes it $6.84. The same 100 domains cost $0 to look up again for 30 days.
 
-Money rules
-
-- The quote shows before any paid action, line by line. It is exact: each domain and provider pair is one call.
-- `--cap` (or `spendCapUsd`) stops a run before a call that would pass it.
-- Each call sends a stable idempotency key per (domain, provider), for example `techstack:tomba:stripe.com`. A retry never pays twice.
-- A run still in progress when waiting stops is stored as pending. The next run collects it. It is never treated as failed at $0.
-
 ## Agreement between providers
 
 For each technology the app shows which providers listed it and "2 of 3": how many of the providers that returned a technology list named it. A provider that failed, is pending or only returns category counts does not count in the base. Technology names are matched by a normalised key (case, punctuation and a `.js` suffix are ignored, and a short alias list covers cases such as AWS and Amazon Web Services). Two providers that spell a product differently beyond that will show as two technologies. Add the spelling to `ALIASES` in `src/lib/parse.ts`. The overlap panel shows shared technologies and a percentage for each pair of providers.
+
+## Deploy
+
+There is no `vercel.json` and no GitHub workflow in this repo. The app keeps its stored answers in a JSON file on disk (`data/techstack.json`, or the path in `TECHSTACK_DATA`), so it needs a host with a writable, persistent disk. I have not deployed it. On such a host run `npm ci --ignore-scripts && npm run build && npm start`, and set `LOOOT_TOKEN` in the host's environment. There is no sign-in, so put it behind your own access control.
+
+## Troubleshooting
+
+| What you see | What it means and what to do |
+|---|---|
+| `LOOOT_TOKEN is not set. Create an agent token at https://looot.ai/settings, or use --dry-run.` | The CLI found no token. The quote prints first, then this line, exit code 2. Export `LOOOT_TOKEN` or add `--dry-run`. |
+| `LOOOT_TOKEN is not set on the server, so the run is disabled.` | Web app with no token. Set it in `.env.local` and restart. |
+| `looot returned HTTP 401` (or the API's own error message) in a provider's error column | The token is wrong, expired or lacks a scope. Create a new one with runs.execute, catalog.read, runs.read and usage.read. |
+| `looot returned HTTP 402` (or the API's own message) | The balance is too low. The code does not check this itself. It stores the API's message for that call. Top up (minimum $5) and run again. |
+| A provider shows `blocked` or `stopped` in the status column | looot did not run the call. The tool stores the status when the run has no error message, and charges nothing. Open the run in your looot app for the reason. |
+| `Every call failed. See the error in the state file.` | Exit code 1. Open `state/techstack.json` and read the `error` of each call. |
+| `Stopped at the $1.00 cap: N calls were not run. Run again with a higher --cap.` | The cap was reached. Raise `--cap` if you accept the cost. |
+| `N calls are pending (still running at the provider). Run the same command again to collect them.` | Wait and run the same command. Pending runs are not charged twice. |
+| `The technology was not found` | The reverse search could not resolve the technology name at PredictLeads. Try the exact product name. |
+| A provider answers but the technology list is empty | The parser did not recognise the response shape. Fields that are not found stay blank on purpose. Open an issue with the raw response. |
+| `No file at <path>` or `Give --domains, --domain or --find.` | Usage errors, exit code 2. |
+
+How to file an issue. Open one at https://github.com/loootai/looot-techstack/issues with the run id (this tool does not print or store it, so give the idempotency key, for example `techstack:tomba:stripe.com`, and the time of the call so the run can be found), the command you used, and the raw response body with secrets removed.
+
+## Status
+
+The test suite passes (31 tests), but it uses fixtures. If a parser fails on a real response, open an issue with the raw response body (see Troubleshooting).
+
+- No paid looot run was made. Each provider parser is built from the provider's public documentation and from fixtures, not from a recorded paid response. Providers rename fields, and a field that is not found shows as blank, not as a guess.
+- The inputs for the reverse search are the least certain part: `TECH` for BuiltWith Lists is documented, but the technology resolver input for PredictLeads (`technology_id_or_name`) and the `technology_id` for its discover call are inferred from the endpoint descriptions.
+- The free BuiltWith answer is read as category counts with `latest` and `oldest` times. If its shape differs, the category panel stays empty.
+- Dropped on purpose: Sumble (needs an organization id from a separate call), Datagma ($0.065 a domain, same data), list filters such as country and spend, historical trends, and a browser extension.
+- A "find companies" search returns the provider's first page, not every site using the technology.
 
 ## Install for agents
 
@@ -77,14 +157,6 @@ npm run techstack -- --domains examples/domains.csv --dry-run
 ```
 
 The Claude Code skill is `skills/looot-techstack/SKILL.md` (copy it to `~/.claude/skills/`). `public/llms.txt` summarises the commands. The skill dry-runs first, keeps paid providers opt-in and never raises the cap on its own.
-
-## What is not tested
-
-- No paid looot run was made. Each provider parser is built from the provider's public documentation and from fixtures, not from a recorded paid response. Providers rename fields, and a field that is not found shows as blank, not as a guess.
-- The inputs for the reverse search are the least certain part: `TECH` for BuiltWith Lists is documented, but the technology resolver input for PredictLeads (`technology_id_or_name`) and the `technology_id` for its discover call are inferred from the endpoint descriptions.
-- The free BuiltWith answer is read as category counts with `latest` and `oldest` times. If its shape differs, the category panel stays empty.
-- Dropped on purpose: Sumble (needs an organization id from a separate call), Datagma ($0.065 a domain, same data), list filters such as country and spend, historical trends, and a browser extension.
-- A "find companies" search returns the provider's first page, not every site using the technology.
 
 ## Develop
 
