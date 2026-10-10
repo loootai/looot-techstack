@@ -1,0 +1,5 @@
+{
+  "providers": ["builtwith-free", "tomba", "predictleads"],
+  "spendCapUsd": 1,
+  "cacheDays": 30
+}

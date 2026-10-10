@@ -1,0 +1,21 @@
+# looot-techstack
+
+Open-source technology lookup for websites. Input: domains. Output: technologies by category, with the providers side by side, the agreement between them, and first and last seen where a provider gives dates. Also: find companies using a technology.
+
+## Run it
+- Dry run, no token, no call: npm run techstack -- --domains examples/domains.csv --dry-run
+- Real run: LOOOT_TOKEN=... npm run techstack -- --domains domains.csv --cap 0.50
+- With a paid provider: add --providers builtwith-free,tomba,predictleads,builtwith
+- Reverse search: npm run techstack -- --find HubSpot --dry-run
+- Demo UI with sample data: npm run demo (http://localhost:3530)
+
+## Outputs
+out/techstack.json, techstack.csv (one row per domain and technology), techstack.md. Answers are cached in state/techstack.json for 30 days, so repeats are free.
+
+## Money rules
+The quote is printed before any call and is exact (each domain and provider pair is one call). --cap stops the run before a call that would pass it. Idempotency key per (domain, provider). A run still in progress is stored as pending and collected on the next run.
+
+## looot job
+company.technographics: builtwith-free1-api-json ($0), tomba-technology ($0.0089), predictleads-companies-technology-detections ($0.01), builtwith-api-json ($0.0495), theirstack-companies-technologies ($0.0981). Reverse: builtwith-lists12-api-json, predictleads-discover-technologies-technology-detections.
+
+Docs: https://docs.looot.ai  Skill file: https://looot.ai/skill.md
