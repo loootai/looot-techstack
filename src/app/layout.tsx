@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
-import { Shell } from "@/components/Shell";
-import { isDemo } from "@/lib/app";
+import { AppShell } from "@/components/AppShell";
+import { getSpend, isDemo } from "@/lib/app";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -22,14 +22,19 @@ export const viewport: Viewport = {
 
 const themeScript = `(function(){try{var q=new URLSearchParams(location.search).get("theme");var t=q||localStorage.getItem("theme")||"system";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d)}catch(e){}})()`;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const spend = await getSpend();
   return (
     <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-dvh bg-page text-ink">
-        <Shell demo={isDemo()}>{children}</Shell>
+        <AppShell demo={isDemo()} spend={spend}>
+          {children}
+        </AppShell>
       </body>
     </html>
   );

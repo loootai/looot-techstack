@@ -25,7 +25,11 @@ export function Kbd({ children, className }: { children: React.ReactNode; classN
 
 /** Table parts with the app's 32 px rows. Real table markup. */
 export function Table({ className, ...props }: React.TableHTMLAttributes<HTMLTableElement>) {
-  return <table className={cn("w-full text-left text-13", className)} {...props} />;
+  return (
+    <div className="overflow-x-auto">
+      <table className={cn("w-full text-left text-13", className)} {...props} />
+    </div>
+  );
 }
 export function Th({ className, ...props }: React.ThHTMLAttributes<HTMLTableCellElement>) {
   return <th scope="col" className={cn("h-8 whitespace-nowrap border-b border-line px-3 text-11 font-medium text-mute first:pl-4 last:pr-4 md:first:pl-6 md:last:pr-6", className)} {...props} />;

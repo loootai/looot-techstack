@@ -34,6 +34,10 @@
   --k4: #a9d9c2;
   --kq: #cfe3d8;
   --k-grey: #a3aea8;
+  --sidebar: #0b2e22;
+  --sidebar-fg: #e6ede8;
+  --sidebar-muted: #9db3a8;
+  --sidebar-active: #174636;
   --shadow: 0 8px 28px rgb(11 46 34 / 0.14), 0 1px 3px rgb(11 46 34 / 0.08);
   color-scheme: light;
 }
@@ -70,6 +74,10 @@
   --k4: #bfebd7;
   --kq: #254a3c;
   --k-grey: #55665e;
+  --sidebar: #081410;
+  --sidebar-fg: #e6ede8;
+  --sidebar-muted: #8fa398;
+  --sidebar-active: #14271f;
   --shadow: 0 8px 28px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }

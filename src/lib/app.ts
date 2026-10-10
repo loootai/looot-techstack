@@ -4,7 +4,8 @@ import { buildDemoState, DemoRunner } from "@/demo/seed";
 import { ConfigSchema, DEFAULT_CONFIG, type TechstackConfig } from "./config";
 import { parseDomains } from "./domain";
 import { hasLoootToken, loootFromEnv, type LoootRunner } from "./looot";
-import { toMicros } from "./money";
+import type { ShellSpend } from "@/components/AppShell";
+import { toMicros, usd } from "./money";
 import { PROVIDERS } from "./providers";
 import type { Quote } from "./quote";
 import { chooseProviders, chooseSearchProviders, quoteFind, quoteLookup, resultsFor, runFind, runLookup, searchHits } from "./service";
@@ -26,6 +27,13 @@ async function open(): Promise<{ state: State; config: TechstackConfig; save: ()
   }
   const state = loadState(statePath());
   return { state, config: loadConfig(configPath()), save: () => saveState(statePath(), state), looot: hasLoootToken() ? loootFromEnv() : null };
+}
+
+/** Free. What the stored answers cost in total, shown in the sidebar. The cap is per run, so it is a note and not a limit on this number. */
+export async function getSpend(): Promise<ShellSpend> {
+  const { state, config } = await open();
+  const micros = [...Object.values(state.lookups), ...Object.values(state.searches)].reduce((n, r) => n + r.costMicros, 0);
+  return { title: "Spent, stored answers", spent: usd(micros), cap: null, ratio: 0, note: `Cap per run: ${usd(toMicros(config.spendCapUsd))}.` };
 }
 
 export interface Common {

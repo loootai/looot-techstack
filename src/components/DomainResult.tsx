@@ -70,7 +70,7 @@ export function DomainResultView({ r, records }: { r: Result; records: LookupRec
         <p className="border-t border-line px-3 py-2 text-12 text-mute">Dates are blank where no provider gave them. Names are matched across providers by a normalised key, so React and ReactJS count as one.</p>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <section className="rounded-panel border border-line bg-panel" aria-label="Providers">
           <h3 className="border-b border-line p-3 font-semibold">Providers side by side</h3>
           <Table>
