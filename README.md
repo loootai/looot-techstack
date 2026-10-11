@@ -2,6 +2,8 @@
 
 # looot-techstack
 
+> **Security notice.** Versions 0.1.2 and older had no admin sign-in. Anyone who could reach a deployed instance could run paid lookups and finds on your looot balance, as often as they liked, and download the stored results. If you run 0.1.2 or older on a reachable host, upgrade to 0.1.3 and set `TECHSTACK_ADMIN_PASSWORD`. See [Securing a deployment](#securing-a-deployment).
+
 [![License](https://img.shields.io/github/license/loootai/looot-techstack)](LICENSE) [![Release](https://img.shields.io/github/v/release/loootai/looot-techstack)](https://github.com/loootai/looot-techstack/releases) [![Docs](https://img.shields.io/badge/docs-docs.looot.ai-12A06A)](https://docs.looot.ai)
 
 An open-source alternative to [BuiltWith](https://builtwith.com/plans) and [Wappalyzer](https://www.wappalyzer.com/pricing/) lookups: what technology a company's website uses, and which companies use a technology. BuiltWith starts at $295 a month and Wappalyzer's paid plans at $250 a month, with a free tier of 50 lookups a month (public pricing pages, read 2026-10-10). This repo runs on one looot key and you pay list price per domain, from $0 up to a few cents.
@@ -34,7 +36,7 @@ npm install --ignore-scripts
 npm run demo
 ```
 
-Open http://localhost:3530. It shows made-up companies with fixture answers. Stop it with Ctrl-C. To check the CLI without a token, see the dry run below.
+Open http://localhost:3530. The demo has no sign-in and shows a "Demo, no sign-in" badge. It refuses to start if `LOOOT_TOKEN` is set or a data file exists, unless you also set an admin password. It shows made-up companies with fixture answers. Stop it with Ctrl-C. To check the CLI without a token, see the dry run below.
 
 ## Run it with your own data
 
@@ -49,6 +51,10 @@ export LOOOT_TOKEN=...         # CLI
 |---|---|---|---|
 | `LOOOT_TOKEN` | Required for real lookups, not for `--dry-run` or the demo | Bearer token for the looot API | Settings, Agent tokens in the looot app, or `looot login` |
 | `LOOOT_API_URL` | Optional | looot API base URL. Default `https://api.looot.ai` | Leave unset |
+| `TECHSTACK_ADMIN_PASSWORD` | Required outside the demo | Admin password, 12 characters or more. Without it the admin pages and API are closed and `/login` shows a setup page. | Choose one |
+| `TECHSTACK_ADMIN_PASSWORD_HASH` | Alternative | `scrypt$salt$key` instead of the plain password. Wins if both are set. | `npm run hash-password -- 'your password'` |
+| `TECHSTACK_SESSION_SECRET` | Optional | Key that signs session cookies. Default: derived from the password. | Leave unset, or a long random string |
+| `TECHSTACK_COOKIE_SECURE` | Optional | Set `0` to drop the Secure flag in production, only for plain-http testing. | Leave unset |
 | `TECHSTACK_DATA` | Optional | State file the web app uses for stored answers. Default `data/techstack.json` | A path you choose |
 | `TECHSTACK_CONFIG` | Optional | Config file the web app reads. Default `techstack.config.json` | A path you choose |
 | `NEXT_PUBLIC_DEMO` | Optional | `1` turns on demo mode with fixture answers. `npm run demo` sets it | Do not set it for real use |
@@ -86,7 +92,8 @@ Results go to `out/techstack.json`, `out/techstack.csv` (one row per domain and 
 ## Spending
 
 - The quote shows before any paid action, line by line. It is exact. Each domain and provider pair is one call.
-- The cap is `--cap <usd>` on the CLI and `spendCapUsd` in `techstack.config.json`. The default is $1. A run stops before a call that would pass it and prints how many calls were not run.
+- The cap is `--cap <usd>` on the CLI and `spendCapUsd` in `techstack.config.json`. The default is $1. A run stops before a call that would pass it and prints how many calls were not run. In the web app the cap is only the one in the config. The browser sends the total from the quote it saw (`quoteMicros`), the server prices the request again, refuses it if the price went up, and bounds the run by the lower of that total and the cap.
+- In the web app, an identical request (the same domains or technology, the same providers) is answered from the stored result for 24 hours and calls looot zero times. A caller can also send an `idempotencyKey` (or an `Idempotency-Key` header). The same key with a different request is refused with 409. One session can start 10 paid requests per 10 minutes.
 - Typical run at list price. 100 domains on the default three providers cost 100 x $0.0189 = $1.89. Adding BuiltWith makes it $6.84. The same 100 domains cost $0 to look up again for 30 days.
 - Each call sends a stable idempotency key per (domain, provider), for example `techstack:tomba:stripe.com`. A retry never pays twice.
 - A run still in progress when waiting stops is stored as pending. The next run collects it. It is never treated as failed at $0.
@@ -117,9 +124,57 @@ Typical run at list price: 100 domains on the default three providers cost 100 x
 
 For each technology the app shows which providers listed it and "2 of 3": how many of the providers that returned a technology list named it. A provider that failed, is pending or only returns category counts does not count in the base. Technology names are matched by a normalised key (case, punctuation and a `.js` suffix are ignored, and a short alias list covers cases such as AWS and Amazon Web Services). Two providers that spell a product differently beyond that will show as two technologies. Add the spelling to `ALIASES` in `src/lib/parse.ts`. The overlap panel shows shared technologies and a percentage for each pair of providers.
 
+## Securing a deployment
+
+Versions 0.1.2 and older had no admin authentication. From 0.1.3 every route is either public on purpose or admin, and the admin routes are closed unless you set a password.
+
+### What is public and what is admin
+
+Pages and routes were listed from `src/app` and classified. A test reads the folder and fails if a route is missing from `src/lib/auth/routes.ts` or if an admin route does not call the gate.
+
+| Kind | Count | Routes |
+|---|---|---|
+| Public | 4 | `/login`, `/api/auth/login`, `/api/auth/logout`, `/api/health` |
+| Admin pages | 3 | `/` (lookup), `/bulk`, `/find` |
+| Admin API | 4 | `/api/lookup` (paid), `/api/find` (paid), `/api/quote`, `/api/export` (stored results as CSV) |
+
+Any path not listed is treated as admin.
+
+### How it works
+
+- Set `TECHSTACK_ADMIN_PASSWORD` (12 characters or more) or `TECHSTACK_ADMIN_PASSWORD_HASH` (from `npm run hash-password -- 'your password'`). Without one, admin routes answer 503, admin pages go to `/login`, and `/login` says what to set.
+- `src/proxy.ts` checks every request. Each admin page, the root layout and each admin route handler checks again with the same function, so a path the matcher misses is still closed.
+- Sign-in compares the password in constant time. A session is a signed token in an httpOnly, SameSite=Lax cookie, Secure in production, valid for 8 hours. 5 wrong passwords from one address lock that address for 15 minutes. 40 wrong passwords from anywhere lock sign-in for everyone for 15 minutes.
+- Every state-changing admin request needs a same-origin `Origin` header and the per-session token in `x-techstack-csrf`. The layout puts the token in a meta tag and the app's own calls send it.
+- A paid request (`/api/lookup`, `/api/find`) needs the session, the CSRF token and the quote total it was shown. The server prices it again and refuses if the price went up. The cap is the server's, from `spendCapUsd`. The browser cannot raise it.
+- An identical paid request is answered from the stored result and not paid for again, for 24 hours. A caller key with a different request is refused with 409. One session can start 10 paid requests per 10 minutes.
+- Admin responses carry `Cache-Control: no-store`. All responses carry a Content-Security-Policy (`frame-ancestors 'none'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. The CSP allows inline scripts because Next.js needs them.
+- The demo (`npm run demo`) has no sign-in and shows a "Demo, no sign-in" badge. It refuses to start next to a `LOOOT_TOKEN` or a data file unless an admin password is set.
+
+### Set it up
+
+```bash
+export TECHSTACK_ADMIN_PASSWORD='a password of 12 or more characters'
+# or keep it out of the environment as plain text:
+npm run hash-password -- 'a password of 12 or more characters'   # prints TECHSTACK_ADMIN_PASSWORD_HASH=...
+npm run build && npm start
+```
+
+A shared password is the floor. For anything people other than you can reach, put the app behind a VPN, a private network or an identity-aware proxy (Cloudflare Access, Tailscale, Google IAP, oauth2-proxy), and leave only the public routes in the table above reachable from the internet. Keep the app's password on as well. The rate limits are in memory, so behind several instances also limit at the proxy.
+
+### What changes when you upgrade
+
+- The web app asks for the password. Set `TECHSTACK_ADMIN_PASSWORD` before you start 0.1.3, or the admin pages stay closed.
+- `/api/lookup` and `/api/find` now require `quoteMicros` in the body: the total from the quote the caller was shown. A script that posted only `{ text }` gets a 400 asking for a quote. The built-in screens send it.
+- Answers to paid requests are kept in the state file for 24 hours, under `idempotency`.
+
+### Not covered
+
+One admin, no per-user accounts or roles. The rate limits are in memory. The CLI has no sign-in: it runs as you on your machine and reads the same files.
+
 ## Deploy
 
-There is no `vercel.json` and no GitHub workflow in this repo. The app keeps its stored answers in a JSON file on disk (`data/techstack.json`, or the path in `TECHSTACK_DATA`), so it needs a host with a writable, persistent disk. I have not deployed it. On such a host run `npm ci --ignore-scripts && npm run build && npm start`, and set `LOOOT_TOKEN` in the host's environment. There is no sign-in, so put it behind your own access control.
+There is no `vercel.json` and no GitHub workflow in this repo. The app keeps its stored answers in a JSON file on disk (`data/techstack.json`, or the path in `TECHSTACK_DATA`), so it needs a host with a writable, persistent disk. I have not deployed it. On such a host run `npm ci --ignore-scripts && npm run build && npm start`, and set `LOOOT_TOKEN` in the host's environment. Set `TECHSTACK_ADMIN_PASSWORD` too, serve it over HTTPS, and read [Securing a deployment](#securing-a-deployment). Without the password the app serves no admin page.
 
 ## Troubleshooting
 

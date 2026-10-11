@@ -3,11 +3,13 @@ import { BulkClient } from "@/components/BulkClient";
 import { LookupPanel } from "@/components/LookupPanel";
 import { getResults } from "@/lib/app";
 import { PROVIDERS } from "@/lib/providers";
+import { requireAdminPage } from "@/lib/auth/guard";
 
 export const metadata: Metadata = { title: "Bulk table" };
 export const dynamic = "force-dynamic";
 
 export default async function BulkPage() {
+  await requireAdminPage();
   const { common, results } = await getResults();
   const providers = PROVIDERS.map((p) => ({ id: p.id, label: p.label, priceMicros: p.priceMicros, note: p.note, on: common.config.providers.includes(p.id) }));
   return (

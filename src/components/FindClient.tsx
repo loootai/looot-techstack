@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { QuoteBox } from "@/components/QuoteBox";
+import { adminFetch } from "@/components/adminFetch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usd } from "@/lib/money";
@@ -15,7 +16,7 @@ export interface SearchInfo {
 }
 
 async function post<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await adminFetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const json = (await res.json()) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
   return json;
@@ -38,7 +39,7 @@ export function FindClient({ providers, runnable, initial = "" }: { providers: S
     setBusy(true);
     setMsg(null);
     try {
-      const r = await post<{ spentMicros: number; calls: number; notRun: number }>("/api/find", { tech, providers: ids });
+      const r = await post<{ spentMicros: number; calls: number; notRun: number }>("/api/find", { tech, providers: ids, quoteMicros: quote?.totalMicros ?? 0 });
       setMsg(`Made ${r.calls} calls and spent ${usd(r.spentMicros)}.${r.notRun > 0 ? ` ${r.notRun} skipped at the cap.` : ""}`);
       router.push(`/find?t=${encodeURIComponent(tech.trim())}`);
       router.refresh();

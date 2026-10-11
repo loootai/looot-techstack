@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, ExternalLink, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, X } from "lucide-react";
+import { LogOut, BookOpen, ExternalLink, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, X } from "lucide-react";
 import { SHELL, type ShellNavItem } from "./shell.config";
 
 /** Spend shown in the sidebar. Strings are pre-formatted by the layout so this file stays app-agnostic. */
@@ -72,7 +72,7 @@ const isActive = (path: string, item: ShellNavItem) => {
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /** App frame shared by every looot app: fixed sidebar from 1024px, drawer below it. */
-export function AppShell({ demo, spend, children }: { demo: boolean; spend?: ShellSpend | null; children: React.ReactNode }) {
+export function AppShell({ demo, spend, signOut = false, children }: { demo: boolean; spend?: ShellSpend | null; /** Show a Sign out button. True when admin sign-in is on. */ signOut?: boolean; children: React.ReactNode }) {
   const path = usePathname();
   const [collapsed, setCollapsed] = useCollapsed();
   const [open, setOpen] = React.useState(false);
@@ -132,14 +132,14 @@ export function AppShell({ demo, spend, children }: { demo: boolean; spend?: She
       </a>
 
       <aside className={`fixed inset-y-0 left-0 z-30 hidden flex-col bg-[var(--sidebar)] text-[var(--sidebar-fg)] transition-[width] duration-150 lg:flex ${collapsed ? "w-16" : "w-60"}`}>
-        <SidebarBody collapsed={collapsed} label="Main" demo={demo} spend={spend} path={path} onToggle={() => setCollapsed(!collapsed)} />
+        <SidebarBody collapsed={collapsed} label="Main" demo={demo} signOut={signOut} spend={spend} path={path} onToggle={() => setCollapsed(!collapsed)} />
       </aside>
 
       {open && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} aria-hidden="true" />
           <div ref={drawerRef} role="dialog" aria-modal="true" aria-label={`${SHELL.name} menu`} className="absolute inset-y-0 left-0 flex w-[min(20rem,85vw)] flex-col bg-[var(--sidebar)] text-[var(--sidebar-fg)] shadow-pop">
-            <SidebarBody collapsed={false} label="Main menu" demo={demo} spend={spend} path={path} onClose={() => setOpen(false)} />
+            <SidebarBody collapsed={false} label="Main menu" demo={demo} signOut={signOut} spend={spend} path={path} onClose={() => setOpen(false)} />
           </div>
         </div>
       )}
@@ -167,7 +167,7 @@ export function AppShell({ demo, spend, children }: { demo: boolean; spend?: She
   );
 }
 
-function SidebarBody({ collapsed, label, demo, spend, path, onToggle, onClose }: { collapsed: boolean; label: string; demo: boolean; spend?: ShellSpend | null; path: string; onToggle?: () => void; onClose?: () => void }) {
+function SidebarBody({ collapsed, label, demo, signOut, spend, path, onToggle, onClose }: { collapsed: boolean; label: string; demo: boolean; signOut: boolean; spend?: ShellSpend | null; path: string; onToggle?: () => void; onClose?: () => void }) {
   const dark = useIsDark();
   const groups: { name: string | null; items: ShellNavItem[] }[] = [];
   const grouped = SHELL.nav.length > 6;
@@ -251,7 +251,7 @@ function SidebarBody({ collapsed, label, demo, spend, path, onToggle, onClose }:
         )}
         {demo && (
           <span className={`inline-flex h-6 items-center justify-center rounded-control border border-amber/40 bg-amber-soft px-2 text-11 font-medium text-amber ${collapsed ? "mx-auto w-10 px-0" : "mr-auto"}`} title="Sample data. No looot calls, no charge.">
-            {collapsed ? "Demo" : "Demo data"}
+            {collapsed ? "Demo" : "Demo, no sign-in"}
           </span>
         )}
         <a href={SHELL.docsUrl} target="_blank" rel="noreferrer" className={small} title={collapsed ? "Docs" : undefined}>
@@ -264,6 +264,14 @@ function SidebarBody({ collapsed, label, demo, spend, path, onToggle, onClose }:
           {collapsed ? <span className="sr-only">GitHub</span> : <span>GitHub</span>}
           {!collapsed && <ExternalLink className="ml-auto size-3 opacity-60" />}
         </a>
+        {signOut && (
+          <form method="post" action="/api/auth/logout">
+            <button type="submit" className={`${small} w-full`} title={collapsed ? "Sign out" : undefined}>
+              <LogOut className="size-4 shrink-0" strokeWidth={1.5} />
+              {collapsed ? <span className="sr-only">Sign out</span> : <span>Sign out</span>}
+            </button>
+          </form>
+        )}
         <button type="button" onClick={() => toggleTheme(dark)} aria-label={dark ? "Switch to light theme" : "Switch to dark theme"} title={collapsed ? (dark ? "Light theme" : "Dark theme") : undefined} className={`${small} w-full`}>
           {dark ? <Sun className="size-4 shrink-0" strokeWidth={1.5} /> : <Moon className="size-4 shrink-0" strokeWidth={1.5} />}
           {!collapsed && <span>{dark ? "Light theme" : "Dark theme"}</span>}

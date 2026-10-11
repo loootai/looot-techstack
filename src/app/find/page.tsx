@@ -4,11 +4,13 @@ import { ProviderChip } from "@/components/ProviderChip";
 import { Table, Td, Th } from "@/components/ui/misc";
 import { getCommon, getFind } from "@/lib/app";
 import { SEARCH_PROVIDERS } from "@/lib/providers";
+import { requireAdminPage } from "@/lib/auth/guard";
 
 export const metadata: Metadata = { title: "Find companies" };
 export const dynamic = "force-dynamic";
 
 export default async function FindPage({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
+  await requireAdminPage();
   const sp = await searchParams;
   const common = await getCommon();
   const f = await getFind(sp.t);

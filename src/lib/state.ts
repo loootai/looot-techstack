@@ -9,6 +9,8 @@ export interface State {
   lookups: Record<string, LookupRecord>;
   searches: Record<string, SearchRecord>;
   calls: CallRecord[];
+  /** Answers to paid requests, so the same request is not paid for twice. Kept 24 hours. */
+  idempotency?: Record<string, { at: string; fingerprint: string; response: unknown }>;
 }
 
 export const emptyState = (): State => ({ version: 1, lookups: {}, searches: {}, calls: [] });

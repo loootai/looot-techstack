@@ -3,10 +3,12 @@ import { LookupPanel } from "@/components/LookupPanel";
 import { getRecords, getResults } from "@/lib/app";
 import { normalizeDomain } from "@/lib/domain";
 import { PROVIDERS } from "@/lib/providers";
+import { requireAdminPage } from "@/lib/auth/guard";
 
 export const dynamic = "force-dynamic";
 
 export default async function LookupPage({ searchParams }: { searchParams: Promise<{ d?: string }> }) {
+  await requireAdminPage();
   const sp = await searchParams;
   const { common, results } = await getResults();
   const wanted = sp.d ? normalizeDomain(sp.d) : null;

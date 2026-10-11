@@ -7,7 +7,7 @@ Open-source technology lookup for websites. Input: domains. Output: technologies
 - Real run: LOOOT_TOKEN=... npm run techstack -- --domains domains.csv --cap 0.50
 - With a paid provider: add --providers builtwith-free,tomba,predictleads,builtwith
 - Reverse search: npm run techstack -- --find HubSpot --dry-run
-- Demo UI with sample data: npm run demo (http://localhost:3530)
+- Demo UI with sample data: npm run demo (http://localhost:3530, no sign-in). The web app outside the demo needs TECHSTACK_ADMIN_PASSWORD (12+ characters).
 
 ## Setup
 Node 22.12 or newer. npm install --ignore-scripts. The CLI reads LOOOT_TOKEN from the shell (create one in looot Settings, Agent tokens). The web app reads .env.local. See README headings: What you need, Try it in one minute, Run it with your own data, Spending, Troubleshooting.

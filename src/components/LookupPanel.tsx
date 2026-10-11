@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { QuoteBox } from "@/components/QuoteBox";
+import { adminFetch } from "@/components/adminFetch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { usd, usdPrecise } from "@/lib/money";
@@ -17,7 +18,7 @@ export interface ProviderInfo {
 }
 
 async function post<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const res = await adminFetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const json = (await res.json()) as T & { error?: string };
   if (!res.ok) throw new Error(json.error ?? `HTTP ${res.status}`);
   return json;
@@ -45,7 +46,7 @@ export function LookupPanel({ mode, providers, runnable, initial = "" }: { mode:
     setBusy(true);
     setMsg(null);
     try {
-      const r = await post<{ domains: string[]; spentMicros: number; calls: number; notRun: number }>("/api/lookup", { text, providers: ids });
+      const r = await post<{ domains: string[]; spentMicros: number; calls: number; notRun: number }>("/api/lookup", { text, providers: ids, quoteMicros: quote?.totalMicros ?? 0 });
       setMsg(`Made ${r.calls} calls and spent ${usd(r.spentMicros)}.${r.notRun > 0 ? ` Stopped at the cap, ${r.notRun} not run.` : ""}`);
       if (mode === "single") router.push(`/?d=${encodeURIComponent(r.domains[0])}`);
       else setText("");
