@@ -33,6 +33,6 @@ export const providerById = (id: string): Provider | undefined => PROVIDERS.find
 /** "Find companies using X" endpoints. */
 export const SEARCH_PROVIDERS = [
   { id: "builtwith", label: "BuiltWith Lists", endpointId: "builtwith-lists12-api-json", priceMicros: 49500, note: "Websites using a technology, by technology name." },
-  { id: "predictleads", label: "PredictLeads", endpointId: "predictleads-discover-technologies-technology-detections", priceMicros: 10000 + 30000, note: "Resolves the technology (predictleads-technologies-2, $0.03), then lists detections ($0.01)." },
+  { id: "predictleads", label: "PredictLeads", endpointId: "predictleads-discover-technologies-technology-detections", priceMicros: 10000 + 30000, resolveMicros: 30000, note: "Resolves the technology (predictleads-technologies-2, $0.03), then lists detections ($0.01)." },
 ] as const;
 export type SearchProviderId = (typeof SEARCH_PROVIDERS)[number]["id"];

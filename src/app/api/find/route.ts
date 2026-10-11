@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { checkAdmin, denied, requireAdminRoute } from "@/lib/auth/guard";
+import { budgetFieldError } from "@/lib/budget";
 import { findTech, PaidRequestError } from "@/lib/app";
 
 export const runtime = "nodejs";
@@ -13,6 +14,8 @@ export async function POST(req: Request) {
   const check = await checkAdmin(req.method, req.headers);
   if (!check.ok) return denied(check);
   const b = (await req.json().catch(() => null)) as { tech?: string; providers?: string[]; quoteMicros?: unknown; idempotencyKey?: unknown } | null;
+  const refused = budgetFieldError(b);
+  if (refused) return NextResponse.json({ error: refused }, { status: 400, headers: NO_STORE });
   if (!b?.tech?.trim()) return NextResponse.json({ error: "tech is required" }, { status: 400, headers: NO_STORE });
   try {
     return NextResponse.json(await findTech(b.tech.trim(), b.providers, { quoteMicros: b.quoteMicros, idempotencyKey: b.idempotencyKey ?? req.headers.get("idempotency-key") ?? undefined, sid: check.sid }), { headers: NO_STORE });

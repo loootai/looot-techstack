@@ -51,3 +51,20 @@ describe("runCli", () => {
     expect(await runCli([], t.deps)).toBe(2);
   });
 });
+
+describe("runCli with the period budget", () => {
+  it("refuses a run whose quote is above what is left of the budget, and calls nothing", async () => {
+    const t = setup();
+    const deps = { ...t.deps, env: { TECHSTACK_DAILY_USD: "0.01", TECHSTACK_MONTHLY_USD: "0.01" } };
+    expect(await runCli(t.args("--providers", "tomba,predictleads"), deps)).toBe(2);
+    expect(t.looot.runAndWait).not.toHaveBeenCalled();
+    expect(t.err.join("\n")).toMatch(/above what is left of the budget/);
+  });
+  it("with --partial runs until the budget stops it and says so", async () => {
+    const t = setup();
+    const deps = { ...t.deps, env: { TECHSTACK_DAILY_USD: "0.01", TECHSTACK_MONTHLY_USD: "0.01" } };
+    expect(await runCli(t.args("--providers", "tomba", "--partial"), deps)).toBe(0);
+    expect((t.looot.runAndWait as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+    expect(t.out.join("\n")).toMatch(/Stopped by the budget/);
+  });
+});

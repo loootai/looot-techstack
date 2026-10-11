@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Layers, Search, Table2 } from "lucide-react";
+import { Layers, Search, Table2, Wallet } from "lucide-react";
 
 export type ShellNavItem = {
   href: string;
@@ -24,5 +24,6 @@ export const SHELL = {
     { href: "/", label: "Lookup", title: "Technology lookup", icon: Search },
     { href: "/bulk", label: "Bulk table", icon: Table2 },
     { href: "/find", label: "Find companies", icon: Layers },
+    { href: "/costs", label: "Costs", title: "Costs and budget", icon: Wallet },
   ],
 };

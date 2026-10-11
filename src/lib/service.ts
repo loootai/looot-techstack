@@ -1,4 +1,5 @@
 import type { TechstackConfig } from "./config";
+import type { Ledger } from "./budget";
 import { findCompanies, lookupDomains, type LookupOutput } from "./engine";
 import type { LoootRunner } from "./looot";
 import { mergeDomain } from "./merge";
@@ -23,15 +24,15 @@ export const quoteLookup = (state: State, config: TechstackConfig, domains: stri
 export const quoteFind = (state: State, config: TechstackConfig, tech: string, ids: SearchProviderId[], capMicros: number, now: Date): Quote => buildSearchQuote(tech, ids, state.searches, config.cacheDays, capMicros, now);
 
 /** Runs the lookup and writes the answers into the state. */
-export async function runLookup(state: State, config: TechstackConfig, looot: LoootRunner, domains: string[], providers: Provider[], capMicros: number, now: Date): Promise<LookupOutput> {
-  const out = await lookupDomains({ domains, providers, looot, cache: state.lookups, cacheDays: config.cacheDays, capMicros, now });
+export async function runLookup(state: State, config: TechstackConfig, looot: LoootRunner, domains: string[], providers: Provider[], capMicros: number, now: Date, ledger?: Ledger): Promise<LookupOutput> {
+  const out = await lookupDomains({ domains, providers, looot, cache: state.lookups, cacheDays: config.cacheDays, capMicros, now, ledger });
   state.lookups = out.records;
   state.calls.push(...out.calls);
   return out;
 }
 
-export async function runFind(state: State, config: TechstackConfig, looot: LoootRunner, tech: string, ids: SearchProviderId[], capMicros: number, now: Date) {
-  const out = await findCompanies({ tech, providerIds: ids, looot, cache: state.searches, cacheDays: config.cacheDays, capMicros, now });
+export async function runFind(state: State, config: TechstackConfig, looot: LoootRunner, tech: string, ids: SearchProviderId[], capMicros: number, now: Date, ledger?: Ledger) {
+  const out = await findCompanies({ tech, providerIds: ids, looot, cache: state.searches, cacheDays: config.cacheDays, capMicros, now, ledger });
   state.searches = out.records;
   state.calls.push(...out.calls);
   return out;

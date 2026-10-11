@@ -1,6 +1,6 @@
 {
   "name": "looot-techstack",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Open-source technology lookup for websites. Domains in, technologies by category out, with providers side by side. Next.js and looot.",
   "license": "MIT",
   "private": true,

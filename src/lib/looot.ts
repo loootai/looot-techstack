@@ -36,6 +36,8 @@ export interface LoootClientOptions {
 /** The part of the client the runner needs. Tests pass a mock of this. */
 export interface LoootRunner {
   runAndWait(endpointId: string, input: Record<string, unknown>, idempotencyKey: string, opts?: RunOptions): Promise<LoootRun>;
+  /** Free. Reads a run again. The budget uses it to settle runs that were still going. */
+  getRun?(runId: string): Promise<LoootRun>;
 }
 
 export interface RunOptions {

@@ -91,13 +91,24 @@ Results go to `out/techstack.json`, `out/techstack.csv` (one row per domain and 
 
 ## Spending
 
+Four limits stand between a request and a charge, checked in this order: the quote, the cap per run, the period budget, then the call.
+
 - The quote shows before any paid action, line by line. It is exact. Each domain and provider pair is one call.
-- The cap is `--cap <usd>` on the CLI and `spendCapUsd` in `techstack.config.json`. The default is $1. A run stops before a call that would pass it and prints how many calls were not run. In the web app the cap is only the one in the config. The browser sends the total from the quote it saw (`quoteMicros`), the server prices the request again, refuses it if the price went up, and bounds the run by the lower of that total and the cap.
+- The cap per run is `--cap <usd>` on the CLI and `spendCapUsd` in `techstack.config.json`. The default is $1. A run stops before a call that would pass it and prints how many calls were not run. In the web app the cap is only the one in the config. The browser sends the total from the quote it saw (`quoteMicros`), the server prices the request again, refuses it if the price went up, and bounds the run by the lower of that total and the cap. A `capUsd` or any other cap field in a request is ignored.
+- The period budget caps all runs together: a daily and a monthly amount (UTC), $10 and $50 until you change them. The signed-in owner changes them on the Costs page of the web app, or you set the starting values with `TECHSTACK_DAILY_USD` and `TECHSTACK_MONTHLY_USD`. A request to `/api/lookup` or `/api/find` cannot carry a budget: a request with a budget field is refused with 400. A request that does not fit what is left is refused with 409 and nothing is called. The CLI refuses it too (exit 2) unless you pass `--partial`, which runs until the budget stops it.
+- Before each paid call the app reserves its list price in `budget.json` (next to the state file), under a lock file, and refuses the call if used plus reserved plus the price would pass the daily or the monthly budget. Two requests started together cannot both pass. When the call ends the reservation becomes the real charge. A call that looot answered with an error gives it back. A call still running at looot (`pending`) keeps its reservation: it is never recorded as failed at $0 and the budget is never handed back early. A network error also keeps it, since the request may have been accepted.
+- The next paid request looks up every call that has a run id with `GET /v1/runs/{id}` and settles the ones that ended, to their real cost. A reservation that cannot be looked up is released after 24 hours.
+- The sidebar and the Costs page show used, reserved and remaining for today and this month. At the budget the request is refused with a message that names the limit.
 - In the web app, an identical request (the same domains or technology, the same providers) is answered from the stored result for 24 hours and calls looot zero times. A caller can also send an `idempotencyKey` (or an `Idempotency-Key` header). The same key with a different request is refused with 409. One session can start 10 paid requests per 10 minutes.
+- The state file is written under a lock too. A paid run can take a minute, so the app merges its new answers into the file as it is at the end of the run instead of overwriting it. Two requests running at the same time keep both sets of answers.
+- Each call sends a stable idempotency key per (provider, domain or technology, cache period), for example `techstack:tomba:stripe.com:p691`. There is no date or time in it. The cache period is `floor(time / cacheDays)`, so the key changes only after the stored answer has gone stale, and looot then runs a fresh lookup instead of replaying the old one. Inside a period a retry never pays twice. Changing `cacheDays` changes the period and so the keys.
+- A finished call is also stored in `budget.json` under its key, so the same call is answered without a second request even if the state file is gone.
 - Typical run at list price. 100 domains on the default three providers cost 100 x $0.0189 = $1.89. Adding BuiltWith makes it $6.84. The same 100 domains cost $0 to look up again for 30 days.
-- Each call sends a stable idempotency key per (domain, provider), for example `techstack:tomba:stripe.com`. A retry never pays twice.
 - A run still in progress when waiting stops is stored as pending. The next run collects it. It is never treated as failed at $0.
 - Failed calls are not charged by looot. The tool reads the real charge from each run.
+- The looot token balance is the final limit. Fund a dedicated token with only what you are willing to spend, and keep the budget below it.
+
+The budget lives in a file, so run one instance on a disk that persists. Several instances, or a serverless host with a throwaway disk, do not share it. The CLI keeps its own `budget.json` next to its `--state` file; point `--state` at the web app's `data/techstack.json` to share one budget.
 
 ## Providers and prices
 
@@ -135,8 +146,8 @@ Pages and routes were listed from `src/app` and classified. A test reads the fol
 | Kind | Count | Routes |
 |---|---|---|
 | Public | 4 | `/login`, `/api/auth/login`, `/api/auth/logout`, `/api/health` |
-| Admin pages | 3 | `/` (lookup), `/bulk`, `/find` |
-| Admin API | 4 | `/api/lookup` (paid), `/api/find` (paid), `/api/quote`, `/api/export` (stored results as CSV) |
+| Admin pages | 4 | `/` (lookup), `/bulk`, `/find`, `/costs` (budget and stored-answer costs) |
+| Admin API | 5 | `/api/lookup` (paid), `/api/find` (paid), `/api/quote`, `/api/export` (stored results as CSV), `/api/budget` (read, and change the period budget) |
 
 Any path not listed is treated as admin.
 
@@ -146,8 +157,9 @@ Any path not listed is treated as admin.
 - `src/proxy.ts` checks every request. Each admin page, the root layout and each admin route handler checks again with the same function, so a path the matcher misses is still closed.
 - Sign-in compares the password in constant time. A session is a signed token in an httpOnly, SameSite=Lax cookie, Secure in production, valid for 8 hours. 5 wrong passwords from one address lock that address for 15 minutes. 40 wrong passwords from anywhere lock sign-in for everyone for 15 minutes.
 - Every state-changing admin request needs a same-origin `Origin` header and the per-session token in `x-techstack-csrf`. The layout puts the token in a meta tag and the app's own calls send it.
-- A paid request (`/api/lookup`, `/api/find`) needs the session, the CSRF token and the quote total it was shown. The server prices it again and refuses if the price went up. The cap is the server's, from `spendCapUsd`. The browser cannot raise it.
+- A paid request (`/api/lookup`, `/api/find`) needs the session, the CSRF token and the quote total it was shown. The server prices it again and refuses if the price went up. The cap and the period budget are the server's: the cap is `spendCapUsd`, the budget is set by the owner on the Costs page. The browser cannot raise either, and a request with a budget field is refused.
 - An identical paid request is answered from the stored result and not paid for again, for 24 hours. A caller key with a different request is refused with 409. One session can start 10 paid requests per 10 minutes.
+- The period budget (`PUT /api/budget`) is changed only by the signed-in owner, with the CSRF token. A run cannot raise it. See [Spending](#spending). The looot token balance is the final limit, so give the app a token funded with only what you are willing to spend. The budget file needs one instance on a persistent disk.
 - Admin responses carry `Cache-Control: no-store`. All responses carry a Content-Security-Policy (`frame-ancestors 'none'`), `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff` and `Referrer-Policy: no-referrer`. The CSP allows inline scripts because Next.js needs them.
 - The demo (`npm run demo`) has no sign-in and shows a "Demo, no sign-in" badge. It refuses to start next to a `LOOOT_TOKEN` or a data file unless an admin password is set.
 
@@ -167,6 +179,12 @@ A shared password is the floor. For anything people other than you can reach, pu
 - The web app asks for the password. Set `TECHSTACK_ADMIN_PASSWORD` before you start 0.1.3, or the admin pages stay closed.
 - `/api/lookup` and `/api/find` now require `quoteMicros` in the body: the total from the quote the caller was shown. A script that posted only `{ text }` gets a 400 asking for a quote. The built-in screens send it.
 - Answers to paid requests are kept in the state file for 24 hours, under `idempotency`.
+
+### Upgrading to 0.1.4
+
+- New file `budget.json` next to the state file, created on first use. No migration, nothing to run. The default budget is $10 a day and $50 a month. Set `TECHSTACK_DAILY_USD` and `TECHSTACK_MONTHLY_USD` before the first paid run if you want other starting values.
+- Idempotency keys now end in a cache period (`:p656`). The first lookup after you upgrade for a pair that has no fresh stored answer is a new call, charged once.
+- A paid request that does not fit the budget gets 409 with the reason, where 0.1.3 would have run it.
 
 ### Not covered
 
@@ -192,7 +210,7 @@ There is no `vercel.json` and no GitHub workflow in this repo. The app keeps its
 | A provider answers but the technology list is empty | The parser did not recognise the response shape. Fields that are not found stay blank on purpose. Open an issue with the raw response. |
 | `No file at <path>` or `Give --domains, --domain or --find.` | Usage errors, exit code 2. |
 
-How to file an issue. Open one at https://github.com/loootai/looot-techstack/issues with the run id (this tool does not print or store it, so give the idempotency key, for example `techstack:tomba:stripe.com`, and the time of the call so the run can be found), the command you used, and the raw response body with secrets removed.
+How to file an issue. Open one at https://github.com/loootai/looot-techstack/issues with the run id (this tool does not print or store it, so give the idempotency key, for example `techstack:tomba:stripe.com:p691`, and the time of the call so the run can be found), the command you used, and the raw response body with secrets removed.
 
 ## Status
 

@@ -8,7 +8,8 @@ import { LogOut, BookOpen, ExternalLink, Menu, Moon, PanelLeftClose, PanelLeftOp
 import { SHELL, type ShellNavItem } from "./shell.config";
 
 /** Spend shown in the sidebar. Strings are pre-formatted by the layout so this file stays app-agnostic. */
-export type ShellSpend = { title: string; spent: string; cap: string | null; ratio: number; note?: string };
+export type ShellSpendRow = { label: string; used: string; reserved: string; remaining: string; cap: string | null; ratio: number };
+export type ShellSpend = { title: string; rows: ShellSpendRow[]; note?: string };
 
 const COLLAPSE_KEY = "looot.sidebar";
 const COLLAPSE_EVENT = "looot-sidebar-change";
@@ -179,7 +180,8 @@ function SidebarBody({ collapsed, label, demo, signOut, spend, path, onToggle, o
   }
   const ring = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7fe0b8]";
   const small = `flex h-10 items-center gap-2.5 rounded-control px-2.5 text-13 text-[var(--sidebar-muted)] hover:bg-white/5 hover:text-[var(--sidebar-fg)] lg:h-9 ${ring} ${collapsed ? "justify-center px-0" : ""}`;
-  const pct = spend ? Math.max(0, Math.min(1, spend.ratio)) : 0;
+  const first = spend?.rows[0];
+  const collapsedText = spend && first ? `${spend.title}: ${first.used} used, ${first.reserved} reserved, ${first.remaining} left` : "";
   return (
     <>
       <div className={`flex h-14 shrink-0 items-center gap-2 lg:h-12 ${collapsed ? "justify-center px-0" : "px-4"}`}>
@@ -225,26 +227,31 @@ function SidebarBody({ collapsed, label, demo, signOut, spend, path, onToggle, o
 
       <div className="grid gap-1 border-t border-white/10 p-2">
         {spend && !collapsed && (
-          <div className="mb-1 rounded-control bg-white/5 p-2.5" role="group" aria-label={spend.title}>
+          <div className="mb-1 grid gap-2 rounded-control bg-white/5 p-2.5" role="group" aria-label={spend.title}>
             <p className="text-11 text-[var(--sidebar-muted)]">{spend.title}</p>
-            <p className="num mt-0.5 text-13 font-medium">
-              {spend.spent}
-              {spend.cap && <span className="font-normal text-[var(--sidebar-muted)]"> of {spend.cap}</span>}
-            </p>
-            {spend.cap && (
-              <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label={`${spend.title} against the cap`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct * 100)}>
-                <div className="h-full rounded-full bg-[#12a06a]" style={{ width: `${pct * 100}%` }} />
+            {spend.rows.map((r) => (
+              <div key={r.label}>
+                <p className="num flex justify-between text-13 font-medium">
+                  <span className="font-normal text-[var(--sidebar-muted)]">{r.label}</span>
+                  <span>{r.used}{r.cap && <span className="font-normal text-[var(--sidebar-muted)]"> of {r.cap}</span>}</span>
+                </p>
+                {r.cap && (
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label={`${r.label} budget used and reserved`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(Math.max(0, Math.min(1, r.ratio)) * 100)}>
+                    <div className="h-full rounded-full bg-[#12a06a]" style={{ width: `${Math.max(0, Math.min(1, r.ratio)) * 100}%` }} />
+                  </div>
+                )}
+                <p className="num mt-1 text-11 leading-4 text-[var(--sidebar-muted)]">{r.reserved} reserved, {r.remaining} left</p>
               </div>
-            )}
-            {spend.note && <p className="mt-1.5 text-11 leading-4 text-[var(--sidebar-muted)]">{spend.note}</p>}
+            ))}
+            {spend.note && <p className="text-11 leading-4 text-[var(--sidebar-muted)]">{spend.note}</p>}
           </div>
         )}
-        {spend && collapsed && (
-          <div className="mx-auto mb-1 grid w-10 gap-1 text-center" title={`${spend.title}: ${spend.spent}${spend.cap ? ` of ${spend.cap}` : ""}`} role="group" aria-label={`${spend.title}: ${spend.spent}${spend.cap ? ` of ${spend.cap}` : ""}`}>
-            <span className="num text-11 font-medium" aria-hidden="true">{spend.spent}</span>
-            {spend.cap && (
+        {spend && collapsed && first && (
+          <div className="mx-auto mb-1 grid w-10 gap-1 text-center" title={collapsedText} role="group" aria-label={collapsedText}>
+            <span className="num text-11 font-medium" aria-hidden="true">{first.used}</span>
+            {first.cap && (
               <div className="h-1 overflow-hidden rounded-full bg-white/10" aria-hidden="true">
-                <div className="h-full rounded-full bg-[#12a06a]" style={{ width: `${pct * 100}%` }} />
+                <div className="h-full rounded-full bg-[#12a06a]" style={{ width: `${Math.max(0, Math.min(1, first.ratio)) * 100}%` }} />
               </div>
             )}
           </div>

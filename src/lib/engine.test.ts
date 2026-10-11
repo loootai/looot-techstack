@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { cacheId, findCompanies, lookupDomains, lookupKey, searchKey } from "./engine";
+import { cacheId, findCompanies, lookupDomains, lookupKey, periodOf, searchKey } from "./engine";
 import type { LoootRun, LoootRunner } from "./looot";
 import { mergeDomain } from "./merge";
 import { PROVIDERS } from "./providers";
@@ -22,8 +22,8 @@ describe("lookupDomains", () => {
     const looot = runner((e) => (e === "tomba-technology" ? { result: tomba(["Stripe"]), actualCost: 0.0089 } : { result: pl(["Stripe"]), actualCost: 0.01 }));
     const out = await lookupDomains(base(looot));
     expect(looot.calls.map((c) => [c[0], c[1], c[2]])).toEqual([
-      ["tomba-technology", { domain: "a.com" }, lookupKey("tomba", "a.com")],
-      ["predictleads-companies-technology-detections", { company_id_or_domain: "a.com", limit: 100 }, lookupKey("predictleads", "a.com")],
+      ["tomba-technology", { domain: "a.com" }, lookupKey("tomba", "a.com", periodOf(NOW, 30))],
+      ["predictleads-companies-technology-detections", { company_id_or_domain: "a.com", limit: 100 }, lookupKey("predictleads", "a.com", periodOf(NOW, 30))],
     ]);
     expect(out.spentMicros).toBe(18900);
     expect(out.records[cacheId("tomba", "a.com")]).toMatchObject({ status: "ok" });
@@ -90,7 +90,7 @@ describe("findCompanies", () => {
   it("BuiltWith Lists takes the technology name, with a stable key", async () => {
     const looot = runner(() => ({ result: { Results: [{ D: "acme.com" }, { D: "beta.io" }] }, actualCost: 0.0495 }));
     const out = await findCompanies({ tech: "HubSpot", providerIds: ["builtwith"], looot, cache: {}, cacheDays: 30, capMicros: 1_000_000, now: NOW });
-    expect(looot.calls[0]).toEqual(["builtwith-lists12-api-json", { TECH: "HubSpot" }, searchKey("builtwith", "HubSpot")]);
+    expect(looot.calls[0]).toEqual(["builtwith-lists12-api-json", { TECH: "HubSpot" }, searchKey("builtwith", "HubSpot", periodOf(NOW, 30))]);
     expect(out.records["builtwith|hubspot"].hits.map((h) => h.domain)).toEqual(["acme.com", "beta.io"]);
   });
   it("PredictLeads resolves the technology first, and a missing technology is a failure, not a charge", async () => {

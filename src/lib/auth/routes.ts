@@ -12,8 +12,10 @@ export const ROUTES: Record<string, RouteKind> = {
   "/": "admin",
   "/bulk": "admin",
   "/find": "admin",
+  "/costs": "admin",
   "/login": "public",
   // API
+  "/api/budget": "admin",
   "/api/export": "admin",
   "/api/find": "admin",
   "/api/lookup": "admin",
