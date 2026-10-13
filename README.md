@@ -1,4 +1,6 @@
-<p align="center"><img src="assets/hero.png" alt="looot-techstack" width="100%"></p>
+![looot-techstack: a live lookup of Clay, Apollo.io, ZoomInfo, Apify, Firecrawl, Exa, Tavily, Bright Data and looot itself, with the providers side by side](docs/media/banner.png)
+
+<sub>Logos and names belong to their owners. Public data from a live run on 2026-10-14. No affiliation.</sub>
 
 # looot-techstack
 
@@ -9,6 +11,40 @@
 An open-source alternative to [BuiltWith](https://builtwith.com/plans) and [Wappalyzer](https://www.wappalyzer.com/pricing/) lookups: what technology a company's website uses, and which companies use a technology. BuiltWith starts at $295 a month and Wappalyzer's paid plans at $250 a month, with a free tier of 50 lookups a month (public pricing pages, read 2026-10-10). This repo runs on one looot key and you pay list price per domain, from $0 up to a few cents.
 
 It asks several technology providers about each domain and shows their answers side by side: technologies by category, which providers named each one, how much the providers agree, and first and last seen dates where a provider gives them.
+
+<table>
+<tr>
+<td width="50%"><img src="docs/media/card-lookup.png" alt="One domain, every provider side by side: 115 technologies for clay.com with the providers that listed each one"></td>
+<td width="50%"><img src="docs/media/card-agreement.png" alt="Where providers disagree: Tomba named 17 technologies for clay.com, PredictLeads 100, two shared"></td>
+</tr>
+<tr>
+<td><img src="docs/media/card-bulk.png" alt="Nine companies in one table, with technology filter, category filter and CSV export"></td>
+<td><img src="docs/media/card-quote.png" alt="See the cost before you spend: a quote for nine domains with BuiltWith on, $0.45, nothing run"></td>
+</tr>
+<tr>
+<td><img src="docs/media/card-costs.png" alt="Daily and monthly budget, and the charge per provider from the live run"></td>
+<td></td>
+</tr>
+</table>
+
+![Walkthrough of the app: lookup, bulk table, quote and costs](docs/media/demo.gif)
+
+[Watch the walkthrough as MP4](docs/media/demo.mp4)
+
+## Live run
+
+On 2026-10-14 I ran the CLI against looot's own market with the default providers (BuiltWith Free, Tomba, PredictLeads): clay.com, apollo.io, zoominfo.com, apify.com, firecrawl.dev, exa.ai, tavily.com, brightdata.com and looot.ai.
+
+- 27 lookup calls, $0.1701 charged, which matches the quote of $0.17. Two reverse searches (below) cost $0.
+- Tomba and PredictLeads answered for all 9 domains. Each domain got 107 to 120 technologies, looot.ai 24.
+- BuiltWith Free failed on 3 of 9 domains (clay.com, zoominfo.com, exa.ai). A failed call is not charged. The tool does not store the error text for it.
+- The providers barely overlap. For clay.com Tomba listed 17 technologies and PredictLeads 100, and 2 were on both lists (2%). PredictLeads reads job posts, so many of its entries are tools named in job ads, not tags found on the site.
+- Every technology shows the category "Other". The parser did not map the providers' category fields on these responses, so the category filter has nothing to filter on yet.
+- "Find companies" returned nothing. PredictLeads answered "The technology was not found" for both Firecrawl and HubSpot at $0. The other reverse provider (BuiltWith Lists) was not run, to stay under the budget.
+
+The screens are the web app, started on the stored answers of that run. Nothing on them is made up. The quote card shows a quote that was not run: the same nine domains with BuiltWith switched on, $0.45 at list price.
+
+<sub>Logos and names belong to their owners. Public data from a live run on 2026-10-14. No affiliation.</sub>
 
 ![Lookup, light](docs/screenshots/lookup-light.png)
 ![Bulk table, dark](docs/screenshots/bulk-dark.png)
@@ -216,7 +252,7 @@ How to file an issue. Open one at https://github.com/loootai/looot-techstack/iss
 
 The test suite passes (31 tests), but it uses fixtures. If a parser fails on a real response, open an issue with the raw response body (see Troubleshooting).
 
-- No paid looot run was made. Each provider parser is built from the provider's public documentation and from fixtures, not from a recorded paid response. Providers rename fields, and a field that is not found shows as blank, not as a guess.
+- One paid run was made on 2026-10-14 (see Live run). Tomba, PredictLeads and BuiltWith Free parsers were checked against it. BuiltWith, TheirStack and BuiltWith Lists have not been run live. Parsers for those are built from public documentation and fixtures. Providers rename fields, and a field that is not found shows as blank, not as a guess.
 - The inputs for the reverse search are the least certain part: `TECH` for BuiltWith Lists is documented, but the technology resolver input for PredictLeads (`technology_id_or_name`) and the `technology_id` for its discover call are inferred from the endpoint descriptions.
 - The free BuiltWith answer is read as category counts with `latest` and `oldest` times. If its shape differs, the category panel stays empty.
 - Dropped on purpose: Sumble (needs an organization id from a separate call), Datagma ($0.065 a domain, same data), list filters such as country and spend, historical trends, and a browser extension.
