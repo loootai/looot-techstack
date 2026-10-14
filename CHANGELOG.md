@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fix: the sign-in form could not be used in a browser. Chrome sends `Origin: null` for a same-origin form post under `Referrer-Policy: no-referrer`, and the same-origin check refused it with 403. The check now falls back to `Sec-Fetch-Site` for `null`.
+
 ## 0.1.4
 
 Spend limits, version 2. Before this, a paid run was limited by the cap per run, an in-memory rate limit, the 24-hour replay of identical requests and the token balance. Nothing limited spend across different requests, and two different requests started together could both pass the cap. The state file was also overwritten at the end of each request, so two requests running at once could lose each other's stored answers and pay again later.
